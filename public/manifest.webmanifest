@@ -1,0 +1,14 @@
+{
+  "name": "Tech One - Ordens de Serviço",
+  "short_name": "Tech One",
+  "theme_color": "#078da0",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "description": "PWA para controle de ordens de serviço, técnicos e usuários.",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
