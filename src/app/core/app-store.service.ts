@@ -72,6 +72,10 @@ export class AppStore {
     this.orders.update(orders => orders.map(order => order.id === id ? { ...order, status, technicianNotes: notes ?? order.technicianNotes } : order));
   }
 
+  setOrderTechnician(id: number, technicianId?: number): void {
+    this.orders.update(orders => orders.map(order => order.id === id ? { ...order, technicianId } : order));
+  }
+
   deleteOrder(id: number): void {
     this.orders.update(orders => orders.filter(order => order.id !== id));
   }
