@@ -1,275 +1,212 @@
-import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AppStore } from '../../core/app-store.service';
+import { DatePipe } from '@angular/common';
+import { OsService } from '../../core/os.service';
+import { UserService } from '../../core/user.service';
+import { AuthService } from '../../core/auth.service';
+import { ServiceOrder, AppUser, StatusOS } from '../../core/models';
 import { MobileLayoutComponent } from '../../layout/mobile-layout.component';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
 
 @Component({
   selector: 'app-order-detail',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, MobileLayoutComponent, ConfirmDialogComponent],
+  imports: [FormsModule, RouterLink, MobileLayoutComponent, ConfirmDialogComponent, DatePipe],
   template: `
     <app-mobile-layout>
-      @if (order(); as currentOrder) {
-        <div class="order-detail">
-          <article class="order-panel">
-            <p><span>OS:</span> {{ currentOrder.id }}</p>
-            <p><strong>Cliente: {{ currentOrder.client }}</strong></p>
-            <p><span>Tipo:</span> {{ currentOrder.type }}</p>
-            <p><span>Status:</span> {{ currentOrder.status }}</p>
-            <p><span>Endereço:</span> {{ currentOrder.address }}</p>
-            <p><span>Plano:</span> {{ currentOrder.plan }}</p>
-            <p class="date-line"><span>Data:</span> {{ currentOrder.date | date:'dd/MM/yyyy' }}</p>
-            <p class="time-line"><span>Horario:</span> {{ currentOrder.time }}</p>
-            <p class="description-line"><span>Descrição:</span> {{ currentOrder.description }}</p>
-            @if (currentOrder.technicianNotes) {
-              <p class="description-line"><span>Observações:</span> {{ currentOrder.technicianNotes }}</p>
-            }
-          </article>
 
-          @if (currentOrder.status === 'PENDENTE') {
-            <div class="detail-actions">
-              <button class="btn detail-button" type="button" (click)="openTechnicianPicker(currentOrder.technicianId)">Escolhe Tecnico</button>
-              <a class="btn detail-button" [routerLink]="['/ordens', currentOrder.id, 'editar']">Editar OS</a>
-              <button class="btn detail-button" type="button" (click)="deleteOpen.set(true)">Excluir OS</button>
-            </div>
-          } @else if (currentOrder.status === 'EM_ANDAMENTO') {
-            <form class="finish-form" (ngSubmit)="finishOrder(currentOrder.id)">
-              <label class="label">Adicionar Observações do Técnico</label>
-              <textarea class="input" name="notes" [(ngModel)]="notes"></textarea>
-              <label class="label">Status</label>
-              <select class="input" name="status"><option>Concluída</option></select>
-              <button class="btn detail-button" type="submit">Encerrar OS</button>
-            </form>
-          } @else {
-            <p class="done-message">OS concluída.</p>
+      @if (loading()) {
+        <p class="mt-8 text-center text-sm text-gray-500">Carregando OS…</p>
+      }
+
+      @if (erro()) {
+        <p class="rounded bg-red-50 p-4 text-center text-sm text-red-700">{{ erro() }}</p>
+      }
+
+      @if (os(); as order) {
+
+        <article class="card text-sm leading-7 text-gray-900">
+          <p><strong>OS:</strong> #{{ order.id }}</p>
+          <p><strong>Título:</strong> {{ order.titulo }}</p>
+          <p><strong>Descrição:</strong> {{ order.descricao }}</p>
+          <p><strong>Cliente:</strong> {{ order.clienteNome }}</p>
+          <p><strong>Técnico:</strong> {{ order.tecnicoNome ?? 'Sem técnico' }}</p>
+          <p><strong>Prioridade:</strong> {{ order.prioridade }}</p>
+          <p><strong>Status:</strong>
+            <span [class]="statusClass(order.status)">{{ order.status }}</span>
+          </p>
+          <p><strong>Criado em:</strong> {{ order.criadoEm | date:'dd/MM/yyyy HH:mm' }}</p>
+          @if (order.agendada && order.dataAgendada) {
+            <p><strong>Agendado para:</strong> {{ order.dataAgendada | date:'dd/MM/yyyy HH:mm' }}</p>
           }
-        </div>
+        </article>
 
-        <app-confirm-dialog [open]="deleteOpen()" title="Deseja Excluir essa OS?" (cancel)="deleteOpen.set(false)" (confirm)="deleteOrder(currentOrder.id)" />
-
-        @if (chooseTechnician()) {
-          <div class="technician-backdrop">
-            <div class="technician-sheet">
-              <div class="sheet-header">
-                <h2>Selecione o Técnico</h2>
-                <button type="button" aria-label="Fechar" (click)="chooseTechnician.set(false)">×</button>
-              </div>
-              <select class="input" [(ngModel)]="selectedTechnician" name="technician">
-                <option [ngValue]="undefined">Sem técnico</option>
-                @for (technician of store.technicians(); track technician.id) {
-                  <option [ngValue]="technician.id">{{ technician.name }}</option>
-                }
-              </select>
-              <button class="btn detail-button" type="button" (click)="saveTechnician(currentOrder.id)">Escolhe Tecnico</button>
-            </div>
+        <!-- OS ABERTA -->
+        @if (order.status === 'ABERTO') {
+          <div class="mt-8 grid gap-3">
+            @if (isAdmin()) {
+              <button class="btn btn-primary" type="button"
+                      (click)="chooseTechnician.set(true)">
+                Escolher Técnico
+              </button>
+              <a class="btn btn-primary" [routerLink]="['/ordens', order.id, 'editar']">
+                Editar OS
+              </a>
+              <button class="btn btn-danger" type="button"
+                      (click)="deleteOpen.set(true)">
+                Excluir OS
+              </button>
+            }
+            <button class="btn btn-primary mt-2" type="button"
+                    (click)="iniciarOS(order.id)" [disabled]="salvando()">
+              @if (salvando()) { Iniciando… } @else { Iniciar OS }
+            </button>
           </div>
         }
-      } @else {
-        <div class="not-found">
-          <p>OS não encontrada.</p>
-          <a class="btn detail-button" routerLink="/ordens">Voltar</a>
-        </div>
+
+        <!-- OS EM ANDAMENTO -->
+        @if (order.status === 'EM_ANDAMENTO') {
+          <form class="mt-8 space-y-4" (ngSubmit)="encerrarOS(order.id)">
+            <label class="label">Observações</label>
+            <textarea class="input min-h-28" name="notes"
+                      [(ngModel)]="notes" placeholder="Descreva o que foi feito…"></textarea>
+            <label class="label">Encerrar como</label>
+            <select class="input" name="novoStatus" [(ngModel)]="novoStatus">
+              <option value="CONCLUIDO">Concluído</option>
+              <option value="CANCELADO">Cancelado</option>
+            </select>
+            <button class="btn btn-danger-dark w-full" type="submit" [disabled]="salvando()">
+              @if (salvando()) { Encerrando… } @else { Encerrar OS }
+            </button>
+          </form>
+        }
+
+        <!-- OS CONCLUÍDA -->
+        @if (order.status === 'CONCLUIDO') {
+          <p class="mt-8 rounded bg-green-50 p-4 text-center text-sm font-semibold text-green-800">
+            ✓ OS concluída.
+          </p>
+        }
+
+        <!-- OS CANCELADA -->
+        @if (order.status === 'CANCELADO') {
+          <p class="mt-8 rounded bg-red-50 p-4 text-center text-sm font-semibold text-red-800">
+            ✗ OS cancelada.
+          </p>
+        }
+
+        <app-confirm-dialog
+          [open]="deleteOpen()"
+          title="Deseja excluir essa OS?"
+          (cancel)="deleteOpen.set(false)"
+          (confirm)="excluirOS(order.id)"
+        />
+
+        @if (chooseTechnician()) {
+          <div class="absolute inset-x-0 top-14 z-10 bg-white px-5 py-6 shadow-xl">
+            <div class="mb-6 flex items-center justify-between">
+              <h2 class="text-lg font-semibold">Selecione o Técnico</h2>
+              <button type="button" class="text-xl" (click)="chooseTechnician.set(false)">×</button>
+            </div>
+            <select class="input" [(ngModel)]="tecnicoSelecionado" name="tecnico">
+              <option [ngValue]="undefined">Selecione</option>
+              @for (t of tecnicos(); track t.id) {
+                <option [ngValue]="t.id">{{ t.nome }}</option>
+              }
+            </select>
+            <button class="btn btn-primary mt-6 w-full" type="button"
+                    [disabled]="!tecnicoSelecionado || salvando()"
+                    (click)="atribuirTecnico(order.id)">
+              @if (salvando()) { Salvando… } @else { Confirmar Técnico }
+            </button>
+          </div>
+        }
+
+      } @else if (!loading()) {
+        <p class="rounded bg-gray-100 p-6 text-center">OS não encontrada.</p>
       }
+
     </app-mobile-layout>
   `,
-  styles: `
-    :host {
-      display: block;
-      height: 100%;
-      min-height: 0;
-    }
-
-    .order-detail {
-      flex: 1;
-      min-height: 0;
-      width: 100%;
-      overflow-y: auto;
-      padding: 83px 3px 24px;
-      scrollbar-width: none;
-    }
-
-    .order-detail::-webkit-scrollbar {
-      display: none;
-    }
-
-    .order-panel {
-      min-height: 424px;
-      border-radius: 5px;
-      background: #d7d7d9;
-      padding: 6px 6px 12px;
-      color: #0d0f12;
-      font-size: 1.06rem;
-      line-height: 1.2;
-      letter-spacing: .08em;
-    }
-
-    .order-panel p {
-      margin: 0 0 8px;
-    }
-
-    .order-panel strong {
-      font-weight: 900;
-    }
-
-    .order-panel span {
-      font-weight: 400;
-    }
-
-    .date-line {
-      padding-top: 10px;
-    }
-
-    .time-line {
-      padding-top: 18px;
-    }
-
-    .description-line {
-      padding-top: 4px;
-      padding-left: 6px;
-    }
-
-    .detail-actions {
-      display: grid;
-      gap: 14px;
-      padding-top: 13px;
-    }
-
-    .detail-button {
-      width: 100%;
-      min-height: 60px;
-      border-radius: 5px;
-      background: #218ca2;
-      color: #fff;
-      font-size: 1.06rem;
-      font-weight: 900;
-      letter-spacing: .08em;
-    }
-
-    .detail-button:hover {
-      background: #1d7f92;
-    }
-
-    .finish-form {
-      display: grid;
-      gap: 10px;
-      margin-top: 14px;
-      border-radius: 5px;
-      background: #d7d7d9;
-      padding: 14px;
-    }
-
-    .finish-form .input {
-      margin-bottom: 4px;
-      border-radius: 5px;
-      background: #fff;
-    }
-
-    .finish-form textarea.input {
-      min-height: 116px;
-    }
-
-    .done-message,
-    .not-found {
-      margin-top: 14px;
-      border-radius: 5px;
-      background: #d7d7d9;
-      padding: 16px;
-      text-align: center;
-      color: #111827;
-      font-weight: 800;
-    }
-
-    .technician-backdrop {
-      position: absolute;
-      inset: 0;
-      z-index: 15;
-      display: flex;
-      align-items: flex-end;
-      background: rgba(17, 24, 39, .34);
-      padding: 16px;
-    }
-
-    .technician-sheet {
-      width: 100%;
-      border-radius: 8px;
-      background: #fff;
-      padding: 18px 16px;
-      box-shadow: 0 -18px 44px rgba(15, 23, 42, .2);
-    }
-
-    .sheet-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .sheet-header h2 {
-      margin: 0;
-      color: #111827;
-      font-size: 1.1rem;
-      font-weight: 900;
-    }
-
-    .sheet-header button {
-      width: 36px;
-      height: 36px;
-      border: 0;
-      border-radius: 999px;
-      background: #f3f4f6;
-      color: #374151;
-      font-size: 1.35rem;
-      line-height: 1;
-      cursor: pointer;
-    }
-
-    .technician-sheet .input {
-      border-radius: 5px;
-      background: #f3f4f6;
-    }
-
-    @media (max-width: 430px) {
-      .order-detail {
-        padding-top: 83px;
-      }
-    }
-  `
 })
-export class OrderDetailComponent {
-  public readonly store = inject(AppStore);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  readonly id = Number(this.route.snapshot.paramMap.get('id'));
-  readonly order = computed(() => this.store.findOrder(this.id));
-  readonly deleteOpen = signal(false);
+export class OrderDetailComponent implements OnInit {
+  private readonly osService   = inject(OsService);
+  private readonly userService = inject(UserService);
+  private readonly auth        = inject(AuthService);
+  private readonly route       = inject(ActivatedRoute);
+  private readonly router      = inject(Router);
+
+  readonly id      = Number(this.route.snapshot.paramMap.get('id'));
+  readonly isAdmin = this.auth.isAdmin;
+
+  readonly loading          = signal(false);
+  readonly salvando         = signal(false);
+  readonly erro             = signal('');
+  readonly os               = signal<ServiceOrder | null>(null);
+  readonly deleteOpen       = signal(false);
   readonly chooseTechnician = signal(false);
-  selectedTechnician?: number;
-  notes = '';
+  readonly tecnicos         = signal<AppUser[]>([]);
 
-  openTechnicianPicker(technicianId?: number): void {
-    this.selectedTechnician = technicianId;
-    this.chooseTechnician.set(true);
+  notes              = '';
+  novoStatus: StatusOS = 'CONCLUIDO';
+  tecnicoSelecionado?: number;
+
+  ngOnInit(): void {
+    this.carregarOS();
+    this.userService.listar().subscribe({
+      next: list => this.tecnicos.set(list.filter(u => u.role.nome === 'TECNICO')),
+    });
   }
 
-  saveTechnician(id: number): void {
-    this.store.setOrderTechnician(id, this.selectedTechnician);
-    this.chooseTechnician.set(false);
+  iniciarOS(id: number): void {
+    this.salvando.set(true);
+    this.osService.atualizar(id, { status: 'EM_ANDAMENTO' }).subscribe({
+      next:  os => { this.os.set(os); this.salvando.set(false); },
+      error: ()  => { this.erro.set('Erro ao iniciar OS.'); this.salvando.set(false); },
+    });
   }
 
-  startOrder(id: number): void {
-    this.store.setOrderStatus(id, 'EM_ANDAMENTO');
+  encerrarOS(id: number): void {
+    this.salvando.set(true);
+    this.osService.atualizar(id, {
+      status:    this.novoStatus,
+      descricao: this.notes || undefined,
+    }).subscribe({
+      next:  os => { this.os.set(os); this.salvando.set(false); },
+      error: ()  => { this.erro.set('Erro ao encerrar OS.'); this.salvando.set(false); },
+    });
   }
 
-  finishOrder(id: number): void {
-    this.store.setOrderStatus(id, 'CONCLUIDA', this.notes || 'Atendimento finalizado pelo técnico.');
-  }
-
-  deleteOrder(id: number): void {
-    this.store.deleteOrder(id);
+  excluirOS(_id: number): void {
+    this.deleteOpen.set(false);
     this.router.navigateByUrl('/ordens');
+  }
+
+  atribuirTecnico(osId: number): void {
+    if (!this.tecnicoSelecionado) return;
+    this.salvando.set(true);
+    this.osService.atribuirTecnico(osId, this.tecnicoSelecionado).subscribe({
+      next: os => { this.os.set(os); this.chooseTechnician.set(false); this.salvando.set(false); },
+      error: () => { this.erro.set('Erro ao atribuir técnico.'); this.salvando.set(false); },
+    });
+  }
+
+  statusClass(status: StatusOS): string {
+    const map: Record<StatusOS, string> = {
+      ABERTO:       'font-bold text-blue-700',
+      EM_ANDAMENTO: 'font-bold text-yellow-700',
+      CONCLUIDO:    'font-bold text-green-700',
+      CANCELADO:    'font-bold text-red-700',
+    };
+    return map[status];
+  }
+
+  private carregarOS(): void {
+    this.loading.set(true);
+    this.osService.buscar(this.id).subscribe({
+      next:  os => { this.os.set(os); this.loading.set(false); },
+      error: ()  => { this.erro.set('Erro ao carregar OS.'); this.loading.set(false); },
+    });
   }
 }

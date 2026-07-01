@@ -1,30 +1,74 @@
-export type OrderStatus = 'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CANCELADA';
-export type OrderType = 'INSTALAÇÃO' | 'MANUTENÇÃO';
-export type UserType = 'Administrador' | 'Tecnico' | 'Usuario';
+// ─── Enums da API ─────────────────────────────────────────────────────────────
+export type Prioridade = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
+export type StatusOS   = 'ABERTO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
+export type RoleNome   = 'ADMIN' | 'TECNICO';
 
-export interface Technician {
-  id: number;
-  name: string;
-}
-
+// ─── Ordens de Serviço — espelho exato do JSON da API ─────────────────────────
 export interface ServiceOrder {
-  id: number;
-  client: string;
-  type: OrderType;
-  status: OrderStatus;
-  address: string;
-  plan: string;
-  date: string;
-  time: string;
-  description: string;
-  technicianId?: number;
-  technicianNotes?: string;
+  id:           number;
+  titulo:       string;
+  descricao:    string;
+  clienteId:    number;
+  clienteNome:  string;
+  tecnicoId:    number | null;
+  tecnicoNome:  string | null;
+  prioridade:   Prioridade;
+  status:       StatusOS;
+  criadoEm:     string;
+  dataAgendada: string | null;
+  agendada:     boolean;
 }
 
+export interface CreateOSRequest {
+  titulo:        string;
+  descricao:     string;
+  clienteId:     number;
+  tecnicoId?:    number;
+  prioridade:    Prioridade;
+  status:        StatusOS;
+  dataAgendada?: string;
+}
+
+export interface UpdateOSRequest {
+  titulo?:     string;
+  descricao?:  string;
+  prioridade?: Prioridade;
+  status?:     StatusOS;
+}
+
+// ─── Usuários ─────────────────────────────────────────────────────────────────
 export interface AppUser {
-  id: number;
-  name: string;
-  type: UserType;
+  id:    number;
+  nome:  string;
   email: string;
-  login: string;
+  role:  { id: number; nome: RoleNome };
+}
+
+export interface CreateUserRequest {
+  nome:   string;
+  email:  string;
+  senha:  string;
+  roleId: number;
+}
+
+export interface UpdateUserRequest {
+  nome?:   string;
+  email?:  string;
+  senha?:  string;
+  roleId?: number;
+}
+
+// ─── Clientes ─────────────────────────────────────────────────────────────────
+export interface Cliente {
+  id:       number;
+  nome:     string;
+  telefone: string;
+  email:    string;
+  endereco: string;
+}
+
+// ─── Roles ────────────────────────────────────────────────────────────────────
+export interface Role {
+  id:   number;
+  nome: RoleNome;
 }
