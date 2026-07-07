@@ -18,15 +18,19 @@ export const routes: Routes = [
   { path: 'recuperar-senha', component: ForgotPasswordComponent },
 
   // ── Autenticado (admin + técnico) ─────────────────────────────────────────
-  { path: 'perfil',            component: ProfileComponent,     canActivate: [authGuard] },
-  { path: 'ordens',            component: OrdersListComponent,  canActivate: [authGuard] },
-  { path: 'ordens/abertas',    component: OrdersListComponent,  canActivate: [authGuard], data: { status: 'ABERTO' } },
-  { path: 'ordens/historico',  component: OrdersListComponent,  canActivate: [authGuard], data: { status: 'CONCLUIDO' } },
+  { path: 'perfil',           component: ProfileComponent,    canActivate: [authGuard] },
+  { path: 'ordens',           component: OrdersListComponent, canActivate: [authGuard] },
+
+  // ── ROTAS ESTÁTICAS antes de :id (evita NaN) ──────────────────────────────
+  { path: 'ordens/abertas',   component: OrdersListComponent, canActivate: [authGuard], data: { status: 'ABERTO' } },
+  { path: 'ordens/historico', component: OrdersListComponent, canActivate: [authGuard], data: { status: 'CONCLUIDO' } },
+  { path: 'ordens/nova',      component: OrderFormComponent,  canActivate: [authGuard, adminGuard] },
+
+  // ── Rotas dinâmicas com :id ───────────────────────────────────────────────
   { path: 'ordens/:id',        component: OrderDetailComponent, canActivate: [authGuard] },
+  { path: 'ordens/:id/editar', component: OrderFormComponent,   canActivate: [authGuard, adminGuard] },
 
   // ── Apenas ADMIN ──────────────────────────────────────────────────────────
-  { path: 'ordens/nova',         component: OrderFormComponent, canActivate: [authGuard, adminGuard] },
-  { path: 'ordens/:id/editar',   component: OrderFormComponent, canActivate: [authGuard, adminGuard] },
   { path: 'usuarios',            component: UsersListComponent, canActivate: [authGuard, adminGuard] },
   { path: 'usuarios/novo',       component: UserFormComponent,  canActivate: [authGuard, adminGuard] },
   { path: 'usuarios/:id/editar', component: UserFormComponent,  canActivate: [authGuard, adminGuard] },

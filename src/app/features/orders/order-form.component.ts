@@ -7,7 +7,7 @@ import { UserService } from '../../core/user.service';
 import { Prioridade, StatusOS, AppUser, Cliente } from '../../core/models';
 import { MobileLayoutComponent } from '../../layout/mobile-layout.component';
 
-const API = 'https://tech-on-api.onrender.com/api';
+const API = 'http://localhost:8080/api';
 
 @Component({
   selector: 'app-order-form',
@@ -24,25 +24,36 @@ const API = 'https://tech-on-api.onrender.com/api';
           <p class="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{{ erro() }}</p>
         }
 
+        <!-- loading dos selects -->
+        @if (carregando()) {
+          <p class="text-center text-sm text-gray-500 mb-4">Carregando dados…</p>
+        }
+
         <form class="flex min-h-0 flex-1 flex-col space-y-4 overflow-y-auto pr-1 pb-4"
               (ngSubmit)="salvar()">
 
+          <!-- Cliente -->
           <label class="label">Cliente</label>
           <select class="input" name="clienteId" [(ngModel)]="clienteId" required>
-            <option [ngValue]="undefined">Selecione o cliente</option>
+            <option [ngValue]="undefined">
+              {{ clientes().length === 0 ? 'Nenhum cliente cadastrado' : 'Selecione o cliente' }}
+            </option>
             @for (c of clientes(); track c.id) {
               <option [ngValue]="c.id">{{ c.nome }}</option>
             }
           </select>
 
+          <!-- Título -->
           <label class="label">Título</label>
           <input class="input" name="titulo" [(ngModel)]="titulo"
                  placeholder="Título da OS" required />
 
+          <!-- Descrição -->
           <label class="label">Descrição</label>
           <textarea class="input min-h-24" name="descricao"
                     [(ngModel)]="descricao" placeholder="Descrição"></textarea>
 
+          <!-- Prioridade -->
           <label class="label">Prioridade</label>
           <select class="input" name="prioridade" [(ngModel)]="prioridade">
             <option value="BAIXA">Baixa</option>
@@ -51,6 +62,7 @@ const API = 'https://tech-on-api.onrender.com/api';
             <option value="URGENTE">Urgente</option>
           </select>
 
+          <!-- Status -->
           <label class="label">Status</label>
           <select class="input" name="status" [(ngModel)]="status">
             <option value="ABERTO">Aberto</option>
@@ -59,21 +71,26 @@ const API = 'https://tech-on-api.onrender.com/api';
             <option value="CANCELADO">Cancelado</option>
           </select>
 
+          <!-- Técnico -->
           <label class="label">Técnico (opcional)</label>
           <select class="input" name="tecnicoId" [(ngModel)]="tecnicoId">
-            <option [ngValue]="undefined">Sem técnico</option>
+            <option [ngValue]="undefined">
+              {{ tecnicos().length === 0 ? 'Nenhum técnico cadastrado' : 'Sem técnico' }}
+            </option>
             @for (t of tecnicos(); track t.id) {
               <option [ngValue]="t.id">{{ t.nome }}</option>
             }
           </select>
 
+          <!-- Data agendada -->
           <label class="label">Data agendada</label>
           <input class="input" name="dataAgendada" [(ngModel)]="dataAgendada"
                  type="datetime-local" />
 
           <div class="action-bar mt-2">
             <a routerLink="/ordens" class="btn btn-danger">Cancelar</a>
-            <button class="btn btn-primary" type="submit" [disabled]="loading()">
+            <button class="btn btn-primary" type="submit"
+                    [disabled]="loading() || carregando()">
               @if (loading()) { Salvando… } @else { Confirmar }
             </button>
           </div>
@@ -100,20 +117,54 @@ export class OrderFormComponent implements OnInit {
   tecnicoId?:  number;
   dataAgendada = '';
 
-  readonly loading  = signal(false);
-  readonly erro     = signal('');
-  readonly clientes = signal<Cliente[]>([]);
-  readonly tecnicos = signal<AppUser[]>([]);
+  readonly loading   = signal(false);
+  readonly carregando = signal(true);
+  readonly erro      = signal('');
+  readonly clientes  = signal<Cliente[]>([]);
+  readonly tecnicos  = signal<AppUser[]>([]);
 
   ngOnInit(): void {
+    let clientesOk  = false;
+    let tecnicosOk  = false;
+
+    const verificarFim = () => {
+      if (clientesOk && tecnicosOk) this.carregando.set(false);
+    };
+
+    // ── Carrega clientes ──────────────────────────────────────────
     this.http.get<Cliente[]>(`${API}/clientes`).subscribe({
-      next: list => this.clientes.set(list),
+      next: list => {
+        console.log('clientes recebidos:', list);
+        this.clientes.set(list);
+        clientesOk = true;
+        verificarFim();
+      },
+      error: err => {
+        console.error('erro ao carregar clientes:', err);
+        this.erro.set(`Erro ao carregar clientes (status ${err.status}).`);
+        clientesOk = true;
+        verificarFim();
+      },
     });
 
+    // ── Carrega técnicos ──────────────────────────────────────────
     this.userService.listar().subscribe({
-      next: list => this.tecnicos.set(list.filter(u => u.role.nome === 'TECNICO')),
+      next: list => {
+        console.log('usuarios recebidos:', list);
+        const tecs = list.filter(u => u.role.nome === 'TECNICO');
+        console.log('tecnicos filtrados:', tecs);
+        this.tecnicos.set(tecs);
+        tecnicosOk = true;
+        verificarFim();
+      },
+      error: err => {
+        console.error('erro ao carregar técnicos:', err);
+        tecnicosOk = true;
+        verificarFim();
+      },
     });
 
+    // ── Modo edição ───────────────────────────────────────────────
     if (this.id) {
       this.osService.buscar(this.id).subscribe({
         next: os => {
@@ -135,6 +186,7 @@ export class OrderFormComponent implements OnInit {
       this.erro.set('Cliente e título são obrigatórios.');
       return;
     }
+
     this.loading.set(true);
     this.erro.set('');
 
@@ -154,7 +206,11 @@ export class OrderFormComponent implements OnInit {
 
     req$.subscribe({
       next:  () => this.router.navigateByUrl('/ordens'),
-      error: () => { this.erro.set('Erro ao salvar OS.'); this.loading.set(false); },
+      error: err => {
+        console.error('erro ao salvar OS:', err);
+        this.erro.set(`Erro ao salvar OS (status ${err.status}).`);
+        this.loading.set(false);
+      },
     });
   }
 }
