@@ -35,7 +35,8 @@ import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
                 </div>
                 <p><strong>ID:</strong> {{ user.id }}</p>
                 <p><strong>Usuário:</strong> {{ user.nome }}</p>
-                <p><strong>Perfil:</strong> {{ user.role.nome }}</p>
+                <!-- role agora é string direta -->
+                <p><strong>Perfil:</strong> {{ user.role }}</p>
                 <p><strong>Email:</strong> {{ user.email }}</p>
               </article>
             } @empty {

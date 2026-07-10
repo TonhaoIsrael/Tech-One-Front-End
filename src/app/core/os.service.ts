@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ServiceOrder, CreateOSRequest, UpdateOSRequest } from './models';
 
-const API = 'http://localhost:8080/api';
+const API = 'https://tech-on-api.onrender.com/api';
 
 @Injectable({ providedIn: 'root' })
 export class OsService {

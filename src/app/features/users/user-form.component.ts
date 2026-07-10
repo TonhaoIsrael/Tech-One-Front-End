@@ -90,9 +90,17 @@ export class UserFormComponent implements OnInit {
     if (this.id) {
       this.userService.buscar(this.id).subscribe({
         next: user => {
-          this.nome   = user.nome;
-          this.email  = user.email;
-          this.roleId = user.role.id;
+          this.nome  = user.nome;
+          this.email = user.email;
+          // role agora é string — busca o id na lista de roles pelo nome
+          this.userService.listarRoles().subscribe({
+            next: roles => {
+              const r = roles.find(x =>
+                x.nome.toLowerCase() === user.role?.toString().toLowerCase()
+              );
+              this.roleId = r?.id;
+            }
+          });
         },
         error: () => this.erro.set('Não foi possível carregar o usuário.'),
       });

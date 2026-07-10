@@ -1,7 +1,7 @@
 // ─── Enums da API ─────────────────────────────────────────────────────────────
 export type Prioridade = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
 export type StatusOS   = 'ABERTO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
-export type RoleNome   = 'ADMIN' | 'TECNICO';
+export type RoleNome   = 'ADMIN' | 'Tecnico' | 'TECNICO';
 
 // ─── Ordens de Serviço — espelho exato do JSON da API ─────────────────────────
 export interface ServiceOrder {
@@ -10,6 +10,7 @@ export interface ServiceOrder {
   descricao:    string;
   clienteId:    number;
   clienteNome:  string;
+  clienteEndereco: string;
   tecnicoId:    number | null;
   tecnicoNome:  string | null;
   prioridade:   Prioridade;
@@ -36,12 +37,13 @@ export interface UpdateOSRequest {
   status?:     StatusOS;
 }
 
-// ─── Usuários ─────────────────────────────────────────────────────────────────
+// ─── Usuários — role vem como string direta da API ────────────────────────────
 export interface AppUser {
   id:    number;
   nome:  string;
   email: string;
-  role:  { id: number; nome: RoleNome };
+  role:  string;   // ex: 'Tecnico', 'ADMIN'
+  ativo: boolean;
 }
 
 export interface CreateUserRequest {
@@ -65,10 +67,11 @@ export interface Cliente {
   telefone: string;
   email:    string;
   endereco: string;
+  ativo:    boolean;
 }
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
 export interface Role {
   id:   number;
-  nome: RoleNome;
+  nome: string;
 }

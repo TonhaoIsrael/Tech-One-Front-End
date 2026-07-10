@@ -9,7 +9,6 @@ import { OrderFormComponent }      from './features/orders/order-form.component'
 import { ProfileComponent }        from './features/profile/profile.component';
 import { UsersListComponent }      from './features/users/users-list.component';
 import { UserFormComponent }       from './features/users/user-form.component';
-
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
 
@@ -37,3 +36,4 @@ export const routes: Routes = [
 
   { path: '**', redirectTo: 'login' },
 ];
+

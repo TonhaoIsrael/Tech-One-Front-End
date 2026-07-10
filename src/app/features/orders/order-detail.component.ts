@@ -154,8 +154,11 @@ export class OrderDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregarOS();
+    // role agora é string: 'Tecnico' ou 'ADMIN'
     this.userService.listar().subscribe({
-      next: list => this.tecnicos.set(list.filter(u => u.role.nome === 'TECNICO')),
+      next: list => this.tecnicos.set(
+        list.filter(u => u.role?.toString().toLowerCase() === 'tecnico')
+      ),
     });
   }
 
@@ -210,3 +213,4 @@ export class OrderDetailComponent implements OnInit {
     });
   }
 }
+
