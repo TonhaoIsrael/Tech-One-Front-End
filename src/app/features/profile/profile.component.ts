@@ -76,8 +76,7 @@ import { MobileLayoutComponent } from '../../layout/mobile-layout.component';
 
         <!-- ── Card do usuário — só nome, email e perfil ── -->
         <div class="card mb-4 flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-teal-100 text-teal-700 font-bold text-base flex items-center justify-center shrink-0">{{ iniciais() }}
-          </div>
+          
           <div class="min-w-0">
             <p class="font-bold text-gray-900 text-sm truncate">{{ user()?.nome }}</p>
             <span class="text-xs font-semibold px-2 py-0.5 rounded-full mt-0.5 inline-block"
