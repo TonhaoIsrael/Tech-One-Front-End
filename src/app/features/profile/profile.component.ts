@@ -87,7 +87,7 @@ import { MobileLayoutComponent } from '../../layout/mobile-layout.component';
         </div>
 
         <!-- ── Menu ── -->
-        <nav class="grid grid-cols-3 gap-2 mb-4 mt-4">
+        <nav class="grid grid-cols-3 gap-4 mb-4 mt-4">
           <a routerLink="/ordens"           class="btn btn-primary text-xs py-2">Lista de OS</a>
           <a routerLink="/ordens/abertas"   class="btn btn-primary text-xs py-2">OS Abertas</a>
           <a routerLink="/ordens/historico" class="btn btn-primary text-xs py-2">Histórico</a>
